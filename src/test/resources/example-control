@@ -1,0 +1,20 @@
+Package: php5
+Version: 5.3.10-1ubuntu3.2
+Architecture: all
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Installed-Size: 21
+Depends: libapache2-mod-php5 (>= 5.3.10-1ubuntu3.2) | libapache2-mod-php5filter (>= 5.3.10-1ubuntu3.2) | php5-cgi (>= 5.3.10-1ubuntu3.2) | php5-fpm (>= 5.3.10-1ubuntu3.2), php5-common (>= 5.3.10-1ubuntu3.2)
+Section: php
+Priority: optional
+Homepage: http://www.php.net/
+Description: server-side, HTML-embedded scripting language (metapackage)
+ This package is a metapackage that, when installed, guarantees that you
+ have at least one of the four server-side versions of the PHP5 interpreter
+ installed. Removing this package won't remove PHP5 from your system, however
+ it may remove other packages that depend on this one.
+ .
+ PHP5 is a widely-used general-purpose scripting language that is
+ especially suited for Web development and can be embedded into HTML.
+ The goal of the language is to allow web developers to write
+ dynamically generated pages quickly.
+Original-Maintainer: Debian PHP Maintainers <pkg-php-maint@lists.alioth.debian.org>
