@@ -66,6 +66,7 @@ public class DebianContentLocator
                 w.write("Description: " + hit.getAttributes().get("Description").replace("\n", "\n ") + "\n");
                 w.write("\n");
             }
+            w.close();
             payload = baos.toByteArray();
 
         }
