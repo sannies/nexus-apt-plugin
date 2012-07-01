@@ -32,13 +32,17 @@ import com.github.sannies.nexusaptplugin.deb.GetControl;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.maven.index.*;
+import org.apache.maven.index.artifact.Gav;
 import org.apache.maven.index.context.IndexCreator;
 import org.apache.maven.index.creator.AbstractIndexCreator;
 import org.apache.maven.index.creator.MinimalArtifactInfoIndexCreator;
+import org.apache.maven.index.locator.Md5Locator;
 import org.apache.maven.index.util.zip.ZipFacade;
 import org.apache.maven.index.util.zip.ZipHandle;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.util.FileUtils;
+import org.codehaus.plexus.util.StringUtils;
+
 
 /**
  * A Maven Archetype index creator used to detect and correct the artifact packaging to "maven-archetype" if the
@@ -51,6 +55,8 @@ import org.codehaus.plexus.util.FileUtils;
 @Component(role = IndexCreator.class, hint = DebianIndexCreator.ID)
 public class DebianIndexCreator
         extends AbstractIndexCreator {
+    Md5Locator md5Locator = new Md5Locator();
+
     public static final String ID = "debian-package";
 
     public static final IndexerField PACKAGE = new IndexerField(DEBIAN.PACKAGE, IndexerFieldVersion.V1, "deb_package",
@@ -80,6 +86,13 @@ public class DebianIndexCreator
     public static final IndexerField DESCRIPTION = new IndexerField(DEBIAN.DESCRIPTION, IndexerFieldVersion.V1, "deb_description",
             DEBIAN.DESCRIPTION.getDescription(), Field.Store.YES, Field.Index.NO);
 
+    public static final IndexerField MD5 = new IndexerField(DEBIAN.MD5, IndexerFieldVersion.V1, "deb_md5",
+            DEBIAN.MD5.getDescription(), Field.Store.YES, Field.Index.NO);
+
+    public static final IndexerField FILENAME = new IndexerField(DEBIAN.FILENAME, IndexerFieldVersion.V1, "deb_filename",
+            DEBIAN.FILENAME.getDescription(), Field.Store.YES, Field.Index.NO);
+
+
     public DebianIndexCreator() {
         super(ID, Arrays.asList(MinimalArtifactInfoIndexCreator.ID));
     }
@@ -88,6 +101,17 @@ public class DebianIndexCreator
         if ("deb".equals(ac.getArtifactInfo().fextension)) {
             List<String> control = GetControl.doGet(ac.getArtifact());
             ac.getArtifactInfo().getAttributes().putAll(DebControlParser.parse(control));
+            ac.getArtifactInfo().getAttributes().put("Filename", "./" + ac.getArtifactInfo().groupId.replace(".", "/") + "/" + ac.getArtifactInfo().artifactId + "/" + ac.getArtifactInfo().version + "/" + ac.getArtifactInfo().fname);
+            File md5 = md5Locator.locate(ac.getArtifact());
+            if (md5.exists()) {
+                try {
+                    ac.getArtifactInfo().md5 = StringUtils.chomp(FileUtils.fileRead(md5)).trim().split(" ")[0];
+                } catch (IOException e) {
+                    ac.addError(e);
+                }
+            }
+
+
         }
 
     }
@@ -104,11 +128,14 @@ public class DebianIndexCreator
             doc.add(SECTION.toField(ai.getAttributes().get(SECTION.getOntology().getFieldName())));
             doc.add(PRIORITY.toField(ai.getAttributes().get(PRIORITY.getOntology().getFieldName())));
             doc.add(DESCRIPTION.toField(ai.getAttributes().get(DESCRIPTION.getOntology().getFieldName())));
+            doc.add(FILENAME.toField(ai.getAttributes().get(FILENAME.getOntology().getFieldName())));
+            doc.add(MD5.toField(ai.md5));
         }
     }
 
     public boolean updateArtifactInfo(Document doc, ArtifactInfo ai) {
         if ("deb".equals(ai.fextension)) {
+
             ai.getAttributes().put(PACKAGE.getOntology().getFieldName(), doc.get(PACKAGE.getKey()));
             ai.getAttributes().put(ARCHITECTURE.getOntology().getFieldName(), doc.get(ARCHITECTURE.getKey()));
             ai.getAttributes().put(INSTALLED_SIZE.getOntology().getFieldName(), doc.get(INSTALLED_SIZE.getKey()));
@@ -118,6 +145,8 @@ public class DebianIndexCreator
             ai.getAttributes().put(SECTION.getOntology().getFieldName(), doc.get(SECTION.getKey()));
             ai.getAttributes().put(PRIORITY.getOntology().getFieldName(), doc.get(PRIORITY.getKey()));
             ai.getAttributes().put(DESCRIPTION.getOntology().getFieldName(), doc.get(DESCRIPTION.getKey()));
+            ai.getAttributes().put(FILENAME.getOntology().getFieldName(), doc.get(FILENAME.getKey()));
+            ai.md5 = doc.get(MD5.getKey());
             return true;
         }
         return false;
