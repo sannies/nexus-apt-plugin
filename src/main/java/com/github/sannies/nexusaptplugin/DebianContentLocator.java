@@ -63,7 +63,7 @@ public class DebianContentLocator
                 w.write("SHA1: " + hit.sha1 + "\n");
                 w.write("Section: " + hit.getAttributes().get("Section") + "\n");
                 w.write("Priority: " + hit.getAttributes().get("Priority") + "\n");
-                w.write("Description: " + hit.getAttributes().get("Description").replace("\n", "\n ") + "\n");
+                w.write("Description: " + (hit.getAttributes().get("Description")!=null?(hit.getAttributes().get("Description").replace("\n", "\n ") + "\n"):"<no desc>"));
                 w.write("\n");
             }
             w.close();
