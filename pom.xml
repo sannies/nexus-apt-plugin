@@ -123,9 +123,9 @@
                     <includeAttached>true</includeAttached>
                     <repositoryName>nexus-apt-plugin</repositoryName>
                     <repositoryOwner>sannies</repositoryOwner>
-                    <excludes>
-                        <exclude>*.jar</exclude>
-                    </excludes>
+                    <includes>
+                        <include>*.zip</include>
+                    </includes>
                 </configuration>
                 <executions>
                     <execution>
