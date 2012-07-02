@@ -119,17 +119,39 @@ public class DebianIndexCreator
 
     public void updateDocument(ArtifactInfo ai, Document doc) {
         if ("deb".equals(ai.fextension)) {
-            doc.add(PACKAGE.toField(ai.getAttributes().get(PACKAGE.getOntology().getFieldName())));
-            doc.add(ARCHITECTURE.toField(ai.getAttributes().get(ARCHITECTURE.getOntology().getFieldName())));
-            doc.add(INSTALLED_SIZE.toField(ai.getAttributes().get(INSTALLED_SIZE.getOntology().getFieldName())));
-            doc.add(MAINTAINER.toField(ai.getAttributes().get(MAINTAINER.getOntology().getFieldName())));
-            doc.add(VERSION.toField(ai.getAttributes().get(VERSION.getOntology().getFieldName())));
-            doc.add(DEPENDS.toField(ai.getAttributes().get(DEPENDS.getOntology().getFieldName())));
-            doc.add(SECTION.toField(ai.getAttributes().get(SECTION.getOntology().getFieldName())));
-            doc.add(PRIORITY.toField(ai.getAttributes().get(PRIORITY.getOntology().getFieldName())));
-            doc.add(DESCRIPTION.toField(ai.getAttributes().get(DESCRIPTION.getOntology().getFieldName())));
-            doc.add(FILENAME.toField(ai.getAttributes().get(FILENAME.getOntology().getFieldName())));
-            doc.add(MD5.toField(ai.md5));
+            if (ai.getAttributes().get(PACKAGE.getOntology().getFieldName()) != null) {
+                doc.add(PACKAGE.toField(ai.getAttributes().get(PACKAGE.getOntology().getFieldName())));
+            }
+            if (ai.getAttributes().get(ARCHITECTURE.getOntology().getFieldName()) != null) {
+                doc.add(ARCHITECTURE.toField(ai.getAttributes().get(ARCHITECTURE.getOntology().getFieldName())));
+            }
+            if (ai.getAttributes().get(INSTALLED_SIZE.getOntology().getFieldName()) != null) {
+                doc.add(INSTALLED_SIZE.toField(ai.getAttributes().get(INSTALLED_SIZE.getOntology().getFieldName())));
+            }
+            if (ai.getAttributes().get(MAINTAINER.getOntology().getFieldName()) != null) {
+                doc.add(MAINTAINER.toField(ai.getAttributes().get(MAINTAINER.getOntology().getFieldName())));
+            }
+            if (ai.getAttributes().get(VERSION.getOntology().getFieldName()) != null) {
+                doc.add(VERSION.toField(ai.getAttributes().get(VERSION.getOntology().getFieldName())));
+            }
+            if (ai.getAttributes().get(DEPENDS.getOntology().getFieldName()) != null) {
+                doc.add(DEPENDS.toField(ai.getAttributes().get(DEPENDS.getOntology().getFieldName())));
+            }
+            if (ai.getAttributes().get(SECTION.getOntology().getFieldName()) != null) {
+                doc.add(SECTION.toField(ai.getAttributes().get(SECTION.getOntology().getFieldName())));
+            }
+            if (ai.getAttributes().get(PRIORITY.getOntology().getFieldName()) != null) {
+                doc.add(PRIORITY.toField(ai.getAttributes().get(PRIORITY.getOntology().getFieldName())));
+            }
+            if (ai.getAttributes().get(DESCRIPTION.getOntology().getFieldName()) != null) {
+                doc.add(DESCRIPTION.toField(ai.getAttributes().get(DESCRIPTION.getOntology().getFieldName())));
+            }
+            if (ai.getAttributes().get(FILENAME.getOntology().getFieldName()) != null) {
+                doc.add(FILENAME.toField(ai.getAttributes().get(FILENAME.getOntology().getFieldName())));
+            }
+            if (ai.md5 != null) {
+                doc.add(MD5.toField(ai.md5));
+            }
         }
     }
 
