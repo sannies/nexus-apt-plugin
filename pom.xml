@@ -6,7 +6,7 @@
 
     <groupId>com.github.nexus-apt-plugin</groupId>
     <artifactId>nexus-apt-plugin</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.1-SNAPSHOT</version>
 
     <packaging>nexus-plugin</packaging>
 
@@ -17,31 +17,13 @@
         <nexus.version>2.0.6</nexus.version>
         <app-lifecycle.version>1.4</app-lifecycle.version>
     </properties>
-    <profiles>
-        <profile>
-            <id>IDE</id>
-            <!-- needed by IDEA to pick up the dependency -->
-            <dependencies>
-                <dependency>
-                    <groupId>org.sonatype.nexus.plugins</groupId>
-                    <artifactId>nexus-indexer-lucene-plugin</artifactId>
-                    <version>${nexus.version}</version>
-                    <scope>provided</scope>
-                </dependency>
-
-            </dependencies>
-        </profile>
-    </profiles>
+    <scm>
+        <connection>https://github.com/sannies/nexus-apt-plugin.git</connection>
+        <developerConnection>https://github.com/sannies/nexus-apt-plugin.git</developerConnection>
+    </scm>
 
     <dependencies>
 
-        <!--
-          Note: there are two sets of dependencies here, the basic (minimal dependencies needed to build Nexus plugins), and the
-          ITset, that is needed if you want to write IT tests using real Nexus environment to test your plugins. If you are using
-          other technique (like having separate module for IT tests), you can freely remove or just move outside of this module
-          these dependencies. The ITset of requirements in this POM are put in between "#ITSet BEGINS" and "#ITSet ENDS" pair of
-          comments.
-        -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
@@ -74,7 +56,6 @@
         </dependency>
 
 
-
         <!-- Basic testing -->
         <dependency>
             <groupId>org.sonatype.nexus</groupId>
@@ -89,34 +70,8 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- #ITSet BEGINS -->
-        <!-- Nexus IT setup (dependencies below are needed if you have extensive ITs and you want to use Nexus Environment) -->
-        <!-- There are plugins connected to this dependency, see below! -->
-        <dependency>
-            <groupId>org.sonatype.nexus</groupId>
-            <artifactId>nexus-test-harness-launcher</artifactId>
-            <scope>test</scope>
-            <version>${nexus.version}</version>
-        </dependency>
-        <!-- #ITSet ENDS -->
 
     </dependencies>
-
-    <!-- #ITSet BEGINS -->
-    <!-- Nexus IT setup (dependencies below are needed if you have extensive ITs and you want to use Nexus Environment) -->
-    <!-- There are plugins and dependencies connected to this import, see below and above! -->
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.sonatype.nexus</groupId>
-                <artifactId>nexus-webapp-dependencies</artifactId>
-                <version>${nexus.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-    <!-- #ITSet ENDS -->
 
     <build>
         <plugins>
@@ -145,52 +100,61 @@
                     <target>1.6</target>
                 </configuration>
             </plugin>
-
-            <!-- #ITSet BEGINS -->
-            <!-- Nexus IT setup (dependencies below are needed if you have extensive ITs and you want to use Nexus Environment) -->
-            <!-- There are dependencies connected to this set of plugin, see above! -->
-       <!--     <plugin>
-                <groupId>org.sonatype.nexus.plugins</groupId>
-                <artifactId>nexus-test-environment-maven-plugin</artifactId>
-                <version>${nexus.version}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>setup-nexus-plugin-environment</goal>
-                        </goals>
-                        <configuration>
-                            <nexusBundleArtifact>
-                                <groupId>org.sonatype.nexus</groupId>
-                                <artifactId>nexus-oss-webapp</artifactId>
-                                <version>${nexus.version}</version>
-                                <type>zip</type>
-                                <classifier>bundle</classifier>
-                            </nexusBundleArtifact>
-                            <nexusBundleName>nexus-oss-webapp-${nexus.version}</nexusBundleName>
-                            <nexusVersion>${nexus.version}</nexusVersion>
-                        </configuration>
-                    </execution>
-                </executions>
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.7</version>
                 <configuration>
-                    <nexusVersion>${nexus.version}</nexusVersion>
+                    <skip>true</skip>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.3.1</version>
             </plugin>
 
             <plugin>
-                <artifactId>maven-failsafe-plugin</artifactId>
-                <version>2.8.1</version>
+                <groupId>com.github.github</groupId>
+                <artifactId>downloads-maven-plugin</artifactId>
+                <version>0.6</version>
+                <configuration>
+                    <description>${project.version} release of ${project.name}</description>
+                    <override>true</override>
+                    <server>github</server>
+                    <includeAttached>true</includeAttached>
+                    <repositoryName>nexus-apt-plugin</repositoryName>
+                    <repositoryOwner>sannies</repositoryOwner>
+                    <excludes>
+                        <exclude>*.jar</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
+                        <id>upload-to-github</id>
                         <goals>
-                            <goal>integration-test</goal>
-                            <goal>verify</goal>
+                            <goal>upload</goal>
                         </goals>
+                        <phase>deploy</phase>
                     </execution>
                 </executions>
-            </plugin>-->
-            <!-- #ITSet ENDS -->
+            </plugin>
 
         </plugins>
     </build>
 
+
+    <profiles>
+        <profile>
+            <id>IDE</id>
+            <!-- needed by IDEA to pick up the dependency -->
+            <dependencies>
+                <dependency>
+                    <groupId>org.sonatype.nexus.plugins</groupId>
+                    <artifactId>nexus-indexer-lucene-plugin</artifactId>
+                    <version>${nexus.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+
+            </dependencies>
+        </profile>
+    </profiles>
 </project>
