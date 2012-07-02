@@ -5,7 +5,7 @@
 
     <groupId>com.github.nexus-apt-plugin</groupId>
     <artifactId>nexus-apt-plugin</artifactId>
-    <version>0.4</version>
+    <version>0.5-SNAPSHOT</version>
 
     <packaging>nexus-plugin</packaging>
 
@@ -19,7 +19,7 @@
     <scm>
         <connection>scm:git:https://github.com/sannies/nexus-apt-plugin.git</connection>
         <developerConnection>scm:git:https://github.com/sannies/nexus-apt-plugin.git</developerConnection>
-      <tag>nexus-apt-plugin-0.4</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <dependencies>
