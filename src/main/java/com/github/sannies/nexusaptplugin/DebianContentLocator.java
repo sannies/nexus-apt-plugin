@@ -42,10 +42,10 @@ public class DebianContentLocator
     public InputStream getContent()
             throws IOException {
         if (payload == null) {
-            Query pq = indexer.constructQuery( MAVEN.PACKAGING, "deb", SearchType.EXACT );
+            Query pq = indexer.constructQuery(MAVEN.PACKAGING, "deb", SearchType.EXACT);
 
-            IteratorSearchRequest sreq = new IteratorSearchRequest( pq, indexingContext );
-            IteratorSearchResponse hits = indexer.searchIterator( sreq );
+            IteratorSearchRequest sreq = new IteratorSearchRequest(pq, indexingContext);
+            IteratorSearchResponse hits = indexer.searchIterator(sreq);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             OutputStreamWriter w = new OutputStreamWriter(new GZIPOutputStream(baos));
@@ -63,7 +63,7 @@ public class DebianContentLocator
                 w.write("SHA1: " + hit.sha1 + "\n");
                 w.write("Section: " + hit.getAttributes().get("Section") + "\n");
                 w.write("Priority: " + hit.getAttributes().get("Priority") + "\n");
-                w.write("Description: " + (hit.getAttributes().get("Description")!=null?(hit.getAttributes().get("Description").replace("\n", "\n ") + "\n"):"<no desc>"));
+                w.write("Description: " + (hit.getAttributes().get("Description") != null ? (hit.getAttributes().get("Description").replace("\n", "\n ")) : "<no desc>") + "\n");
                 w.write("\n");
             }
             w.close();
