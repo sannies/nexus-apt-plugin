@@ -18,8 +18,8 @@
         <app-lifecycle.version>1.4</app-lifecycle.version>
     </properties>
     <scm>
-        <connection>https://github.com/sannies/nexus-apt-plugin.git</connection>
-        <developerConnection>https://github.com/sannies/nexus-apt-plugin.git</developerConnection>
+        <connection>scm:git:https://github.com/sannies/nexus-apt-plugin.git</connection>
+        <developerConnection>scm:git:https://github.com/sannies/nexus-apt-plugin.git</developerConnection>
     </scm>
 
     <dependencies>
