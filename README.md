@@ -20,8 +20,8 @@ to find.
 
 Debian Packages from a Maven Build Process
 ------------------------------------------
-[https://github.com/sannies/blogger-java-deb] is a very small example and works together with 
-this plugin well.
+https://github.com/sannies/blogger-java-deb is a small example on how to create debs in a 
+Maven process and works together well with this plugin.
 
 
 Pitfall
