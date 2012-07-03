@@ -18,7 +18,13 @@ neccessary to delete the index files under sonatype-work/nexus/indexer
 All repositories now contain a Packages.gz that lists all debian packages the indexer was able 
 to find.
 
-pitfall
+Debian Packages from a Maven Build Process
+------------------------------------------
+[https://github.com/sannies/blogger-java-deb] is a very small example and works together with 
+this plugin well.
+
+
+Pitfall
 -------
 
 The indexer cannot find packages when there is a main artifact with the same name:
