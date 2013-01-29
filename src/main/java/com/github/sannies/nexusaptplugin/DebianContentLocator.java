@@ -30,6 +30,12 @@ public class DebianContentLocator
 
     private volatile byte[] payload;
 
+    /* Taken from http://www.debian.org/doc/manuals/debian-reference/ch02.en.html#_package_dependencies */
+    private static final String[] PACKAGE_DEPENDENCIES_FIELD = new String[] {
+        "Depends", "Pre-Depends", "Recommends", "Suggests", "Enhances",
+        "Breaks", "Conflicts", "Replaces", "Provides"
+    };
+
     public DebianContentLocator(String repositoryId, IndexingContext indexingContext,
                                 ArtifactInfoFilter artifactInfoFilter, NexusIndexer indexer) {
         this.repositoryId = repositoryId;
@@ -56,7 +62,10 @@ public class DebianContentLocator
                 w.write("Architecture: " + hit.getAttributes().get("Architecture") + "\n");
                 w.write("Maintainer: " + hit.getAttributes().get("Maintainer") + "\n");
                 w.write("Installed-Size: " + hit.getAttributes().get("Installed-Size") + "\n");
-                w.write("Depends: " + hit.getAttributes().get("Depends") + "\n");
+                /* Those are not mandatory */
+                for(String fieldName : PACKAGE_DEPENDENCIES_FIELD) {
+                	writeIfNonEmpty(w, hit, fieldName);
+                }
                 w.write("Filename: " + hit.getAttributes().get("Filename") + "\n");
                 w.write("Size: " + hit.size + "\n");
                 w.write("MD5sum: " + hit.md5 + "\n");
@@ -72,6 +81,14 @@ public class DebianContentLocator
         }
 
         return new ByteArrayInputStream(payload);
+    }
+
+    private void writeIfNonEmpty(OutputStreamWriter w, ArtifactInfo hit, String fieldName)
+        throws IOException {
+        String fieldValue = hit.getAttributes().get(fieldName);
+        if(fieldValue != null && !fieldValue.isEmpty()) {
+            w.write(fieldName + ": " + fieldValue + "\n");
+        }
     }
 
     @Override
