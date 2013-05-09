@@ -1,167 +1,184 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-    <modelVersion>4.0.0</modelVersion>
+  <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.github.nexus-apt-plugin</groupId>
-    <artifactId>nexus-apt-plugin</artifactId>
-    <version>0.6-SNAPSHOT</version>
+  <groupId>com.github.nexus-apt-plugin</groupId>
+  <artifactId>nexus-apt-plugin</artifactId>
+  <version>0.6-SNAPSHOT</version>
 
-    <packaging>nexus-plugin</packaging>
+  <packaging>nexus-plugin</packaging>
 
-    <name>Nexus APT Repository Plugin</name>
+  <name>Nexus APT Repository Plugin</name>
 
-    <properties>
-        <!-- Set the Nexus version here, against which you build the plugin -->
-        <nexus.version>2.0.6</nexus.version>
-        <app-lifecycle.version>1.4</app-lifecycle.version>
-    </properties>
-    <scm>
-        <connection>scm:git:https://github.com/sannies/nexus-apt-plugin.git</connection>
-        <developerConnection>scm:git:https://github.com/sannies/nexus-apt-plugin.git</developerConnection>
-      <tag>HEAD</tag>
+  <properties>
+    <!-- Set the Nexus version here, against which you build the plugin -->
+    <nexus.version>2.4.0-09</nexus.version>
+    <nexus-rest-api.version>2.2.1</nexus-rest-api.version>
+    <app-lifecycle.version>1.4</app-lifecycle.version>
+  </properties>
+  
+  <scm>
+    <connection>scm:git:https://github.com/sannies/nexus-apt-plugin.git</connection>
+    <developerConnection>scm:git:https://github.com/sannies/nexus-apt-plugin.git</developerConnection>
+    <tag>HEAD</tag>
   </scm>
+  
+  <repositories>
+    <repository>
+      <id>central-repo1</id>
+      <url>http://repo1.maven.org/maven2</url>
+    </repository>
+    <repository>
+      <id>sonatype-forge-snapshots</id>
+      <url>https://repository.sonatype.org/content/groups/forge/</url>
+    </repository>
+    <repository>
+      <id>central-repo2</id>
+      <url>http://repo1.maven.org/maven2</url>
+    </repository>
+  </repositories>
 
-    <dependencies>
+  <dependencies>
 
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <version>1.4.1</version>
+    </dependency>
+
+    <!-- Main plugin API, pulling in what is needed -->
+    <dependency>
+      <groupId>org.sonatype.nexus</groupId>
+      <artifactId>nexus-plugin-api</artifactId>
+      <version>${nexus.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+
+    <!-- This dependency is only needed if you want to include REST Resources -->
+    <dependency>
+      <groupId>org.sonatype.nexus</groupId>
+      <artifactId>nexus-rest-api</artifactId>
+      <version>${nexus-rest-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.sonatype.nexus.plugins</groupId>
+      <artifactId>nexus-indexer-lucene-plugin</artifactId>
+      <version>${nexus.version}</version>
+      <scope>provided</scope>
+      <type>nexus-plugin</type>
+    </dependency>
+
+
+    <!-- Basic testing -->
+    <dependency>
+      <groupId>org.sonatype.nexus</groupId>
+      <artifactId>nexus-plugin-test-api</artifactId>
+      <version>${nexus.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.5</version>
+      <scope>test</scope>
+    </dependency>
+
+
+  </dependencies>
+
+  <build>
+    <plugins>
+
+      <!-- Needed for custom packaging -->
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>app-lifecycle-maven-plugin</artifactId>
+        <version>${app-lifecycle.version}</version>
+        <extensions>true</extensions>
+        <dependencies>
+          <dependency>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>app-lifecycle-nexus</artifactId>
+            <version>${app-lifecycle.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <!-- Have to set source level to at least Java5, we use annotations (Nexus requries 1.6) -->
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.0.2</version>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>2.7</version>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.3.1</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.8.1</version>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>com.github.github</groupId>
+        <artifactId>downloads-maven-plugin</artifactId>
+        <version>0.6</version>
+        <configuration>
+          <description>${project.version} release of ${project.name}</description>
+          <override>true</override>
+          <server>github</server>
+          <includeAttached>true</includeAttached>
+          <repositoryName>nexus-apt-plugin</repositoryName>
+          <repositoryOwner>sannies</repositoryOwner>
+          <includes>
+            <include>*.zip</include>
+          </includes>
+        </configuration>
+        <executions>
+          <execution>
+            <id>upload-to-github</id>
+            <goals>
+              <goal>upload</goal>
+            </goals>
+            <phase>deploy</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+
+  <profiles>
+    <profile>
+      <id>IDE</id>
+      <!-- needed by IDEA to pick up the dependency -->
+      <dependencies>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
-            <version>1.4.1</version>
+          <groupId>org.sonatype.nexus.plugins</groupId>
+          <artifactId>nexus-indexer-lucene-plugin</artifactId>
+          <version>${nexus.version}</version>
+          <scope>provided</scope>
         </dependency>
 
-        <!-- Main plugin API, pulling in what is needed -->
-        <dependency>
-            <groupId>org.sonatype.nexus</groupId>
-            <artifactId>nexus-plugin-api</artifactId>
-            <version>${nexus.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-
-        <!-- This dependency is only needed if you want to include REST Resources -->
-        <dependency>
-            <groupId>org.sonatype.nexus</groupId>
-            <artifactId>nexus-rest-api</artifactId>
-            <version>${nexus.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.sonatype.nexus.plugins</groupId>
-            <artifactId>nexus-indexer-lucene-plugin</artifactId>
-            <version>${nexus.version}</version>
-            <scope>provided</scope>
-            <type>nexus-plugin</type>
-        </dependency>
-
-
-        <!-- Basic testing -->
-        <dependency>
-            <groupId>org.sonatype.nexus</groupId>
-            <artifactId>nexus-plugin-test-api</artifactId>
-            <version>${nexus.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.5</version>
-            <scope>test</scope>
-        </dependency>
-
-
-    </dependencies>
-
-    <build>
-        <plugins>
-
-            <!-- Needed for custom packaging -->
-            <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>app-lifecycle-maven-plugin</artifactId>
-                <version>${app-lifecycle.version}</version>
-                <extensions>true</extensions>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>app-lifecycle-nexus</artifactId>
-                        <version>${app-lifecycle.version}</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
-
-            <!-- Have to set source level to at least Java5, we use annotations (Nexus requries 1.6) -->
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.0.2</version>
-                <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>2.7</version>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-release-plugin</artifactId>
-                <version>2.3.1</version>
-            </plugin>
-            <plugin>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.8.1</version>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>com.github.github</groupId>
-                <artifactId>downloads-maven-plugin</artifactId>
-                <version>0.6</version>
-                <configuration>
-                    <description>${project.version} release of ${project.name}</description>
-                    <override>true</override>
-                    <server>github</server>
-                    <includeAttached>true</includeAttached>
-                    <repositoryName>nexus-apt-plugin</repositoryName>
-                    <repositoryOwner>sannies</repositoryOwner>
-                    <includes>
-                        <include>*.zip</include>
-                    </includes>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>upload-to-github</id>
-                        <goals>
-                            <goal>upload</goal>
-                        </goals>
-                        <phase>deploy</phase>
-                    </execution>
-                </executions>
-            </plugin>
-
-        </plugins>
-    </build>
-
-
-    <profiles>
-        <profile>
-            <id>IDE</id>
-            <!-- needed by IDEA to pick up the dependency -->
-            <dependencies>
-                <dependency>
-                    <groupId>org.sonatype.nexus.plugins</groupId>
-                    <artifactId>nexus-indexer-lucene-plugin</artifactId>
-                    <version>${nexus.version}</version>
-                    <scope>provided</scope>
-                </dependency>
-
-            </dependencies>
-        </profile>
-    </profiles>
+      </dependencies>
+    </profile>
+  </profiles>
 </project>
