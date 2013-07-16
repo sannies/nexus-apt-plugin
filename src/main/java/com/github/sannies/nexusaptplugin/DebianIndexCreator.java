@@ -101,7 +101,7 @@ public class DebianIndexCreator
         if ("deb".equals(ac.getArtifactInfo().fextension)) {
             List<String> control = GetControl.doGet(ac.getArtifact());
             ac.getArtifactInfo().getAttributes().putAll(DebControlParser.parse(control));
-            ac.getArtifactInfo().getAttributes().put("Filename", "./" + ac.getArtifactInfo().groupId.replace(".", "/") + "/" + ac.getArtifactInfo().artifactId + "/" + ac.getArtifactInfo().version + "/" + ac.getArtifactInfo().fname);
+            ac.getArtifactInfo().getAttributes().put("Filename", "../" + ac.getArtifactInfo().groupId.replace(".", "/") + "/" + ac.getArtifactInfo().artifactId + "/" + ac.getArtifactInfo().version + "/" + ac.getArtifactInfo().fname);
             File md5 = md5Locator.locate(ac.getArtifact());
             if (md5.exists()) {
                 try {
