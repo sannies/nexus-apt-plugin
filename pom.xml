@@ -8,13 +8,13 @@
 	<artifactId>nexus-apt-plugin</artifactId>
 	<version>0.6-SNAPSHOT</version>
 
-	<packaging>jar</packaging>
+	<packaging>nexus-plugin</packaging>
 
 	<name>Nexus APT Repository Plugin</name>
 
 	<properties>
 		<!-- Set the Nexus version here, against which you build the plugin -->
-		<nexus.version>2.0.6</nexus.version>
+		<nexus.version>2.5.1-01</nexus.version>
 		<app-lifecycle.version>1.4</app-lifecycle.version>
 	</properties>
 	<scm>
@@ -52,7 +52,7 @@
 		<dependency>
 			<groupId>org.sonatype.nexus</groupId>
 			<artifactId>nexus-plugin-api</artifactId>
-			<version>2.5.1-01</version>
+			<version>${nexus.version}</version>
 			<scope>provided</scope>
 			<type>jar</type>
 		</dependency>
@@ -60,7 +60,7 @@
 		<dependency>
 			<groupId>org.sonatype.nexus.plugins</groupId>
 			<artifactId>nexus-indexer-lucene-plugin</artifactId>
-			<version>2.5.1-01</version>
+			<version>${nexus.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -88,6 +88,20 @@
 
 	<build>
 		<plugins>
+			<!-- Needed for custom packaging -->
+			<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>app-lifecycle-maven-plugin</artifactId>
+				<version>${app-lifecycle.version}</version>
+				<extensions>true</extensions>
+				<dependencies>
+					<dependency>
+						<groupId>org.sonatype.plugins</groupId>
+						<artifactId>app-lifecycle-nexus</artifactId>
+						<version>${app-lifecycle.version}</version>
+					</dependency>
+				</dependencies>
+			</plugin>
 			<!-- Have to set source level to at least Java5, we use annotations (Nexus 
 				requries 1.6) -->
 			<plugin>
@@ -159,4 +173,11 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
+	<repositories>
+		<repository>
+			<id>sonatype</id>
+			<url>http://repository.sonatype.org/content/groups/sonatype-public-grid/</url>
+		</repository>
+	</repositories>
+
 </project>
