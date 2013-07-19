@@ -98,7 +98,7 @@ public class DebianIndexCreator
     }
 
     public void populateArtifactInfo(ArtifactContext ac) throws IOException {
-        if ("deb".equals(ac.getArtifactInfo().fextension)) {
+        if ("deb".equals(ac.getArtifactInfo().packaging)) {
             List<String> control = GetControl.doGet(ac.getArtifact());
             ac.getArtifactInfo().getAttributes().putAll(DebControlParser.parse(control));
             ac.getArtifactInfo().getAttributes().put("Filename", "./" + ac.getArtifactInfo().groupId.replace(".", "/") + "/" + ac.getArtifactInfo().artifactId + "/" + ac.getArtifactInfo().version + "/" + ac.getArtifactInfo().fname);
@@ -118,7 +118,7 @@ public class DebianIndexCreator
 
 
     public void updateDocument(ArtifactInfo ai, Document doc) {
-        if ("deb".equals(ai.fextension)) {
+        if ("deb".equals(ai.packaging)) {
             if (ai.getAttributes().get(PACKAGE.getOntology().getFieldName()) != null) {
                 doc.add(PACKAGE.toField(ai.getAttributes().get(PACKAGE.getOntology().getFieldName())));
             }
@@ -156,7 +156,8 @@ public class DebianIndexCreator
     }
 
     public boolean updateArtifactInfo(Document doc, ArtifactInfo ai) {
-        if ("deb".equals(ai.fextension)) {
+        String filename = doc.get(FILENAME.getKey());
+        if(filename != null && filename.endsWith(".deb")) {
 
             ai.getAttributes().put(PACKAGE.getOntology().getFieldName(), doc.get(PACKAGE.getKey()));
             ai.getAttributes().put(ARCHITECTURE.getOntology().getFieldName(), doc.get(ARCHITECTURE.getKey()));
