@@ -15,7 +15,6 @@
 	<properties>
 		<!-- Set the Nexus version here, against which you build the plugin -->
 		<nexus.version>2.5.1-01</nexus.version>
-		<app-lifecycle.version>1.4</app-lifecycle.version>
 	</properties>
 	<scm>
 		<connection>scm:git:https://github.com/sannies/nexus-apt-plugin.git</connection>
@@ -90,17 +89,19 @@
 		<plugins>
 			<!-- Needed for custom packaging -->
 			<plugin>
-				<groupId>org.sonatype.plugins</groupId>
-				<artifactId>app-lifecycle-maven-plugin</artifactId>
-				<version>${app-lifecycle.version}</version>
+				<groupId>org.sonatype.nexus</groupId>
+				<artifactId>nexus-plugin-bundle-maven-plugin</artifactId>
+				<version>1.0.1</version>
 				<extensions>true</extensions>
-				<dependencies>
-					<dependency>
-						<groupId>org.sonatype.plugins</groupId>
-						<artifactId>app-lifecycle-nexus</artifactId>
-						<version>${app-lifecycle.version}</version>
-					</dependency>
-				</dependencies>
+				<executions>
+					<execution>
+						<id>create-plugin-bundle</id>
+						<goals>
+							<goal>create-bundle</goal>
+						</goals>
+						<phase>package</phase>
+					</execution>
+				</executions>
 			</plugin>
 			<!-- Have to set source level to at least Java5, we use annotations (Nexus 
 				requries 1.6) -->
