@@ -25,8 +25,8 @@ import javax.inject.Named;
  *
  * @author cstamas
  */
-@Named(DebianContentGenerator.ID)
-public class DebianContentGenerator
+@Named(PackagesContentGenerator.ID)
+public class PackagesContentGenerator
         implements ContentGenerator {
     public static final String ID = "PackagesGzContentGenerator";
 
@@ -51,7 +51,7 @@ public class DebianContentGenerator
         item.setLength(-1);
 
 
-        return new DebianContentLocator(repository.getId(),
+        return new PackagesContentLocator(repository.getId(),
                 ((DefaultIndexerManager) indexerManager).getRepositoryIndexContext(repository),
                 new ArtifactInfoFilter() {
                     public boolean accepts(IndexingContext ctx, ArtifactInfo ai) {

@@ -17,7 +17,7 @@ import java.util.zip.GZIPOutputStream;
  *
  * @author cstamas
  */
-public class DebianContentLocator
+public class PackagesContentLocator
         implements ContentLocator {
 
     private final String repositoryId;
@@ -36,7 +36,7 @@ public class DebianContentLocator
         "Breaks", "Conflicts", "Replaces", "Provides"
     };
 
-    public DebianContentLocator(String repositoryId, IndexingContext indexingContext,
+    public PackagesContentLocator(String repositoryId, IndexingContext indexingContext,
                                 ArtifactInfoFilter artifactInfoFilter, NexusIndexer indexer) {
         this.repositoryId = repositoryId;
         this.indexingContext = indexingContext;

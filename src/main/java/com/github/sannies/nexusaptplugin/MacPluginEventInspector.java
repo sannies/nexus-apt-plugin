@@ -98,9 +98,9 @@ public class MacPluginEventInspector
             {
                 DefaultStorageFileItem file =
                         new DefaultStorageFileItem( repository, new ResourceStoreRequest( ARCHETYPE_PATH ), true, false,
-                                new StringContentLocator( DebianContentGenerator.ID ) );
+                                new StringContentLocator( PackagesContentGenerator.ID ) );
 
-                file.setContentGeneratorId( DebianContentGenerator.ID );
+                file.setContentGeneratorId( PackagesContentGenerator.ID );
 
                 repository.storeItem( false, file );
             }
