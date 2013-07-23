@@ -11,6 +11,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.Hex;
 
 import com.github.sannies.nexusaptplugin.cache.DebianFileManager;
 import com.github.sannies.nexusaptplugin.cache.FileGenerator;
@@ -84,7 +85,7 @@ public class ReleaseGenerator
 		    		md.update(file.contents);
 		    		byte[] digest = md.digest();
 		    		w.write(" ");
-		    		w.write(Base64.encodeBase64String(digest));
+		    		w.write(Hex.encodeHexString(digest));
 		    		for(int i = 0; i <= maxSizeLength - file.size.length(); i++)
 		    		{
 		    			w.write(" ");
