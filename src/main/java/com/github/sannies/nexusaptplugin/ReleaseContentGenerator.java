@@ -6,15 +6,15 @@ import javax.inject.Named;
 /**
  * @author Raniz
  */
-@Named(PackagesContentGenerator.ID)
-public class PackagesContentGenerator
+@Named(ReleaseContentGenerator.ID)
+public class ReleaseContentGenerator
 	extends AbstractContentGenerator {
-    public static final String ID = "PackagesContentGenerator";
+    public static final String ID = "ReleaseContentGenerator";
 
 
-	public PackagesContentGenerator()
+	public ReleaseContentGenerator()
 	{
-		super("application/text", "Packages");
+		super("application/text", "Release");
 	}
 
     @Override

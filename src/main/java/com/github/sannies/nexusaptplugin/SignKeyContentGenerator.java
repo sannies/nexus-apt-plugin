@@ -6,15 +6,15 @@ import javax.inject.Named;
 /**
  * @author Raniz
  */
-@Named(PackagesContentGenerator.ID)
-public class PackagesContentGenerator
+@Named(SignKeyContentGenerator.ID)
+public class SignKeyContentGenerator
 	extends AbstractContentGenerator {
-    public static final String ID = "PackagesContentGenerator";
+    public static final String ID = "SignKeyContentGenerator";
 
 
-	public PackagesContentGenerator()
+	public SignKeyContentGenerator()
 	{
-		super("application/text", "Packages");
+		super("application/text", "apt-key.gpg.key");
 	}
 
     @Override

@@ -1,9 +1,12 @@
 
 package com.github.sannies.nexusaptplugin;
 
+import java.io.FileNotFoundException;
+
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import org.bouncycastle.openpgp.PGPException;
 import org.slf4j.Logger;
 import org.sonatype.nexus.proxy.RepositoryNotAvailableException;
 import org.sonatype.nexus.proxy.ResourceStoreRequest;
@@ -21,6 +24,9 @@ import org.sonatype.nexus.proxy.repository.ProxyRepository;
 import org.sonatype.nexus.proxy.repository.Repository;
 import org.sonatype.plexus.appevents.Event;
 
+import com.github.sannies.nexusaptplugin.sign.AptSigningConfiguration;
+import com.github.sannies.nexusaptplugin.sign.PGPSigner;
+
 /**
  * EventInspector that listens to registry events, repo addition and removal, and simply "hooks" in the generated
  * Packages.gz file to their root.
@@ -30,7 +36,10 @@ import org.sonatype.plexus.appevents.Event;
 public class MacPluginEventInspector
         implements EventInspector
 {
-    private static final String ARCHETYPE_PATH = "/Packages.gz";
+    public static final String PACKAGES_ARCHETYPE_PATH = "/Packages";
+    public static final String RELEASE_ARCHETYPE_PATH = "/Release";
+    public static final String RELEASE_GPG_ARCHETYPE_PATH = "/Release.gpg";
+    public static final String PUBLIC_KEY_ARCHETYPE_PATH = "/apt-key.gpg.key";
 
     @Inject
     private Logger logger;
@@ -38,6 +47,9 @@ public class MacPluginEventInspector
     @Inject
     @Named( "maven2" )
     private ContentClass maven2ContentClass;
+
+    @Inject
+    private AptSigningConfiguration signingConfiguration;
 
     public boolean accepts( Event<?> evt )
     {
@@ -93,16 +105,59 @@ public class MacPluginEventInspector
                 || repository.getRepositoryKind().isFacetAvailable( ProxyRepository.class ) || repository.getRepositoryKind().isFacetAvailable(
                 GroupRepository.class ) ) )
         {
-            // new repo added or enabled, "install" the archetype catalog
+            // new repo added or enabled, "install" the archetype catalogs
             try
             {
+            	// Packages.gz
                 DefaultStorageFileItem file =
-                        new DefaultStorageFileItem( repository, new ResourceStoreRequest( ARCHETYPE_PATH ), true, false,
+                        new DefaultStorageFileItem( repository, new ResourceStoreRequest( PACKAGES_ARCHETYPE_PATH ), true, false,
                                 new StringContentLocator( PackagesContentGenerator.ID ) );
 
                 file.setContentGeneratorId( PackagesContentGenerator.ID );
 
                 repository.storeItem( false, file );
+
+                // Release
+                file =
+                        new DefaultStorageFileItem( repository, new ResourceStoreRequest( RELEASE_ARCHETYPE_PATH ), true, false,
+                                new StringContentLocator( ReleaseContentGenerator.ID ) );
+
+                file.setContentGeneratorId( ReleaseContentGenerator.ID );
+
+                repository.storeItem( false, file );
+
+                // Signing
+                try
+                {
+                	// See if the key information is correct, if it's not we'll get some sort of exception here
+	                PGPSigner signer = signingConfiguration.getSigner();
+	
+	                // Release.gpg
+	                file =
+	                        new DefaultStorageFileItem( repository, new ResourceStoreRequest( RELEASE_GPG_ARCHETYPE_PATH ), true, false,
+	                                new StringContentLocator( ReleaseGPGContentGenerator.ID ) );
+	
+	                file.setContentGeneratorId( ReleaseGPGContentGenerator.ID );
+
+	                repository.storeItem( false, file );
+
+	                // apt-key.gpg.key
+	                file =
+	                        new DefaultStorageFileItem( repository, new ResourceStoreRequest( PUBLIC_KEY_ARCHETYPE_PATH ), true, false,
+	                                new StringContentLocator( SignKeyContentGenerator.ID ) );
+	
+	                file.setContentGeneratorId( SignKeyContentGenerator.ID );
+	
+	                repository.storeItem( false, file );
+                }
+                catch(FileNotFoundException e)
+                {
+                	logger.warn("Signing information is either invalid or unset");
+                }
+                catch(PGPException e)
+                {
+                	logger.warn("Signing information is either invalid or unset");
+                }
             }
             catch ( RepositoryNotAvailableException e )
             {

@@ -14,7 +14,7 @@
 
 	<properties>
 		<!-- Set the Nexus version here, against which you build the plugin -->
-		<nexus.version>2.5.1-01</nexus.version>
+		<nexus.version>2.6.0-01</nexus.version>
 	</properties>
 	<scm>
 		<connection>scm:git:https://github.com/sannies/nexus-apt-plugin.git</connection>
@@ -28,6 +28,24 @@
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-compress</artifactId>
 			<version>1.4.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.8</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcpg-jdk15on</artifactId>
+			<version>1.48</version>
+		</dependency>
+	
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>14.0.1</version>
 		</dependency>
 
 		<!-- Main plugin API, pulling in what is needed -->
@@ -64,21 +82,16 @@
 			<scope>provided</scope>
 			<type>nexus-plugin</type>
 		</dependency>
-
+		
+		<dependency>
+			<groupId>org.sonatype.nexus.plugins</groupId>
+			<artifactId>nexus-capabilities-plugin</artifactId>
+			<version>${nexus.version}</version>
+			<scope>provided</scope>
+			<type>nexus-plugin</type>
+		</dependency>
 
 		<!-- Basic testing -->
-		<dependency>
-			<groupId>org.sonatype.nexus</groupId>
-			<artifactId>nexus-plugin-test-api</artifactId>
-			<version>${nexus.version}</version>
-			<scope>test</scope>
-			<exclusions>
-				<exclusion>
-					<artifactId>plexus-restlet-bridge</artifactId>
-					<groupId>org.sonatype.plexus</groupId>
-				</exclusion>
-			</exclusions>
-		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
