@@ -55,7 +55,7 @@ public class FileManagerContentLocator
 	@Override
 	public boolean isReusable()
 	{
-		return true;
+		return false;
 	}
 
 }
