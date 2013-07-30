@@ -3,6 +3,7 @@ package com.github.sannies.nexusaptplugin.cache.generators;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -51,22 +52,31 @@ public class PackagesGenerator
         OutputStreamWriter w = new OutputStreamWriter(baos);
 
         for (ArtifactInfo hit : hits) {
-            w.write("Package: " + hit.getAttributes().get("Package") + "\n");
-            w.write("Version: " + hit.getAttributes().get("Version") + "\n");
-            w.write("Architecture: " + hit.getAttributes().get("Architecture") + "\n");
-            w.write("Maintainer: " + hit.getAttributes().get("Maintainer") + "\n");
-            w.write("Installed-Size: " + hit.getAttributes().get("Installed-Size") + "\n");
+            Map<String, String> attrs = hit.getAttributes();
+            if(attrs.get("Package") == null || attrs.get("Version") == null
+                || attrs.get("Filename") == null)
+            {
+                // This won't produce a real artifact, ignore it
+                continue;
+            }
+
+            // Verify that this is a valid artifact
+            w.write("Package: " + attrs.get("Package") + "\n");
+            w.write("Version: " + attrs.get("Version") + "\n");
+            w.write("Architecture: " + attrs.get("Architecture") + "\n");
+            w.write("Maintainer: " + attrs.get("Maintainer") + "\n");
+            w.write("Installed-Size: " + attrs.get("Installed-Size") + "\n");
             /* Those are not mandatory */
             for(String fieldName : PACKAGE_DEPENDENCIES_FIELD) {
-            	writeIfNonEmpty(w, hit, fieldName);
+                writeIfNonEmpty(w, hit, fieldName);
             }
-            w.write("Filename: " + hit.getAttributes().get("Filename") + "\n");
+            w.write("Filename: " + attrs.get("Filename") + "\n");
             w.write("Size: " + hit.size + "\n");
             w.write("MD5sum: " + hit.md5 + "\n");
             w.write("SHA1: " + hit.sha1 + "\n");
-            w.write("Section: " + hit.getAttributes().get("Section") + "\n");
-            w.write("Priority: " + hit.getAttributes().get("Priority") + "\n");
-            w.write("Description: " + (hit.getAttributes().get("Description") != null ? (hit.getAttributes().get("Description").replace("\n", "\n ")) : "<no desc>") + "\n");
+            w.write("Section: " + attrs.get("Section") + "\n");
+            w.write("Priority: " + attrs.get("Priority") + "\n");
+            w.write("Description: " + (attrs.get("Description") != null ? (attrs.get("Description").replace("\n", "\n ")) : "<no desc>") + "\n");
             w.write("\n");
         }
         w.close();
