@@ -2,19 +2,30 @@
 package com.github.sannies.nexusaptplugin;
 
 import java.io.FileNotFoundException;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.bouncycastle.openpgp.PGPException;
 import org.slf4j.Logger;
+import org.sonatype.nexus.plugins.capabilities.internal.condition.RepositoryLocalStatusCondition;
+import org.sonatype.nexus.proxy.AccessDeniedException;
+import org.sonatype.nexus.proxy.IllegalOperationException;
+import org.sonatype.nexus.proxy.ItemNotFoundException;
 import org.sonatype.nexus.proxy.RepositoryNotAvailableException;
 import org.sonatype.nexus.proxy.ResourceStoreRequest;
+import org.sonatype.nexus.proxy.StorageException;
 import org.sonatype.nexus.proxy.events.EventInspector;
+import org.sonatype.nexus.proxy.events.RepositoryEvent;
 import org.sonatype.nexus.proxy.events.RepositoryEventLocalStatusChanged;
+import org.sonatype.nexus.proxy.events.RepositoryItemEvent;
+import org.sonatype.nexus.proxy.events.RepositoryItemEventDelete;
+import org.sonatype.nexus.proxy.events.RepositoryItemEventStore;
 import org.sonatype.nexus.proxy.events.RepositoryRegistryEventAdd;
 import org.sonatype.nexus.proxy.events.RepositoryRegistryRepositoryEvent;
 import org.sonatype.nexus.proxy.item.DefaultStorageFileItem;
+import org.sonatype.nexus.proxy.item.StorageItem;
 import org.sonatype.nexus.proxy.item.StringContentLocator;
 import org.sonatype.nexus.proxy.registry.ContentClass;
 import org.sonatype.nexus.proxy.repository.GroupRepository;
@@ -22,10 +33,12 @@ import org.sonatype.nexus.proxy.repository.HostedRepository;
 import org.sonatype.nexus.proxy.repository.LocalStatus;
 import org.sonatype.nexus.proxy.repository.ProxyRepository;
 import org.sonatype.nexus.proxy.repository.Repository;
+import org.sonatype.nexus.proxy.storage.UnsupportedStorageOperationException;
 import org.sonatype.plexus.appevents.Event;
 
 import com.github.sannies.nexusaptplugin.sign.AptSigningConfiguration;
 import com.github.sannies.nexusaptplugin.sign.PGPSigner;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * EventInspector that listens to registry events, repo addition and removal, and simply "hooks" in the generated
@@ -37,9 +50,19 @@ public class MacPluginEventInspector
         implements EventInspector
 {
     public static final String PACKAGES_ARCHETYPE_PATH = "/Packages";
+    public static final String PACKAGES_GZ_ARCHETYPE_PATH = "/Packages.gz";
     public static final String RELEASE_ARCHETYPE_PATH = "/Release";
     public static final String RELEASE_GPG_ARCHETYPE_PATH = "/Release.gpg";
     public static final String PUBLIC_KEY_ARCHETYPE_PATH = "/apt-key.gpg.key";
+
+    public static final ImmutableMap<String, String> PATHS_TO_GENERATOR_MAP =
+    		new ImmutableMap.Builder<String, String>()
+    			.put(PACKAGES_ARCHETYPE_PATH, PackagesContentGenerator.ID)
+    			.put(PACKAGES_GZ_ARCHETYPE_PATH, PackagesGzContentGenerator.ID)
+    			.put(RELEASE_ARCHETYPE_PATH, ReleaseContentGenerator.ID)
+    			.put(RELEASE_GPG_ARCHETYPE_PATH, ReleaseGPGContentGenerator.ID)
+    			.put(PUBLIC_KEY_ARCHETYPE_PATH, SignKeyContentGenerator.ID)
+    			.build();
 
     @Inject
     private Logger logger;
@@ -53,28 +76,43 @@ public class MacPluginEventInspector
 
     public boolean accepts( Event<?> evt )
     {
-        if ( evt instanceof RepositoryRegistryEventAdd )
-        {
-            RepositoryRegistryRepositoryEvent registryEvent = (RepositoryRegistryRepositoryEvent) evt;
+		Repository repository;
+		if( evt instanceof RepositoryItemEventStore
+			|| evt instanceof RepositoryItemEventDelete
+			|| evt instanceof RepositoryEventLocalStatusChanged )
+		{
+			repository = ((RepositoryEvent)evt).getRepository();
+		}
+		else if(evt instanceof RepositoryRegistryEventAdd)
+		{
+			repository = ((RepositoryRegistryEventAdd)evt).getRepository();
+		}
+		else
+		{
+			// Not interested in this event type
+			return false;
+		}
 
-            Repository repository = registryEvent.getRepository();
-
-            return maven2ContentClass.isCompatible( repository.getRepositoryContentClass() )
-                    && ( repository.getRepositoryKind().isFacetAvailable( HostedRepository.class )
-                    || repository.getRepositoryKind().isFacetAvailable( ProxyRepository.class ) || repository.getRepositoryKind().isFacetAvailable(
-                    GroupRepository.class ) );
-        }
-        else if ( evt instanceof RepositoryEventLocalStatusChanged )
+		// Check that the repository is compatible
+        if( !( maven2ContentClass.isCompatible( repository.getRepositoryContentClass() )
+                && ( repository.getRepositoryKind().isFacetAvailable( HostedRepository.class )
+                || repository.getRepositoryKind().isFacetAvailable( ProxyRepository.class ) || repository.getRepositoryKind().isFacetAvailable(
+                GroupRepository.class ) ) ) )
         {
-            RepositoryEventLocalStatusChanged localStatusEvent = (RepositoryEventLocalStatusChanged) evt;
+        	// Not compatible with this repository
+        	return false;
+        }
 
-            // only if put into service
-            return LocalStatus.IN_SERVICE.equals( localStatusEvent.getNewLocalStatus() );
-        }
-        else
+        // Check that the repository is in service
+        if( evt instanceof RepositoryEventLocalStatusChanged
+            && !LocalStatus.IN_SERVICE.equals( ((RepositoryEventLocalStatusChanged)evt).getNewLocalStatus() ) )
         {
-            return false;
+        	// Repository is not local
+        	return false;
         }
+
+        // If we haven't returned anything yet we're interested in the event
+        return true;
     }
 
     public void inspect( Event<?> evt )
@@ -83,22 +121,35 @@ public class MacPluginEventInspector
 
         if ( evt instanceof RepositoryRegistryEventAdd )
         {
-            RepositoryRegistryRepositoryEvent registryEvent = (RepositoryRegistryRepositoryEvent) evt;
-
-            repository = registryEvent.getRepository();
+            repository = ((RepositoryRegistryEventAdd)evt).getRepository();
         }
-        else if ( evt instanceof RepositoryEventLocalStatusChanged )
+        else if ( evt instanceof RepositoryEvent )
         {
-            RepositoryEventLocalStatusChanged localStatusEvent = (RepositoryEventLocalStatusChanged) evt;
-
-            repository = localStatusEvent.getRepository();
+            repository = ((RepositoryEvent)evt).getRepository();
         }
         else
         {
             // huh?
             return;
         }
-
+        
+        if ( evt instanceof RepositoryRegistryEventAdd
+        		|| evt instanceof RepositoryEventLocalStatusChanged )
+        {
+        	installArchetypeCatalog(repository);
+        }
+        else if ( evt instanceof RepositoryItemEvent )
+        {
+        	StorageItem item = ((RepositoryItemEvent) evt).getItem();
+        	if( item.getName().toLowerCase().endsWith(".deb") )
+        	{
+        		updateFileModificationDate( repository );
+        	}
+        }
+    }
+    
+    public void installArchetypeCatalog( Repository repository)
+    {
         // check is it a maven2 content, and either a "hosted", "proxy" or "group" repository
         if ( maven2ContentClass.isCompatible( repository.getRepositoryContentClass() )
                 && ( repository.getRepositoryKind().isFacetAvailable( HostedRepository.class )
@@ -108,56 +159,16 @@ public class MacPluginEventInspector
             // new repo added or enabled, "install" the archetype catalogs
             try
             {
-            	// Packages.gz
-                DefaultStorageFileItem file =
-                        new DefaultStorageFileItem( repository, new ResourceStoreRequest( PACKAGES_ARCHETYPE_PATH ), true, false,
-                                new StringContentLocator( PackagesContentGenerator.ID ) );
-
-                file.setContentGeneratorId( PackagesContentGenerator.ID );
-
-                repository.storeItem( false, file );
-
-                // Release
-                file =
-                        new DefaultStorageFileItem( repository, new ResourceStoreRequest( RELEASE_ARCHETYPE_PATH ), true, false,
-                                new StringContentLocator( ReleaseContentGenerator.ID ) );
-
-                file.setContentGeneratorId( ReleaseContentGenerator.ID );
-
-                repository.storeItem( false, file );
-
-                // Signing
-                try
-                {
-                	// See if the key information is correct, if it's not we'll get some sort of exception here
-	                PGPSigner signer = signingConfiguration.getSigner();
-	
-	                // Release.gpg
-	                file =
-	                        new DefaultStorageFileItem( repository, new ResourceStoreRequest( RELEASE_GPG_ARCHETYPE_PATH ), true, false,
-	                                new StringContentLocator( ReleaseGPGContentGenerator.ID ) );
-	
-	                file.setContentGeneratorId( ReleaseGPGContentGenerator.ID );
-
+            	for(Map.Entry<String, String> entry : PATHS_TO_GENERATOR_MAP.entrySet())
+            	{
+	            	// Packages.gz
+	                DefaultStorageFileItem file =
+	                        new DynamicStorageFileItem( repository,
+	                        		new ResourceStoreRequest( entry.getKey() ), true, false,
+	                                new StringContentLocator( entry.getValue() ) );
+	                file.setContentGeneratorId( entry.getValue() );
 	                repository.storeItem( false, file );
-
-	                // apt-key.gpg.key
-	                file =
-	                        new DefaultStorageFileItem( repository, new ResourceStoreRequest( PUBLIC_KEY_ARCHETYPE_PATH ), true, false,
-	                                new StringContentLocator( SignKeyContentGenerator.ID ) );
-	
-	                file.setContentGeneratorId( SignKeyContentGenerator.ID );
-	
-	                repository.storeItem( false, file );
-                }
-                catch(FileNotFoundException e)
-                {
-                	logger.warn("Signing information is either invalid or unset");
-                }
-                catch(PGPException e)
-                {
-                	logger.warn("Signing information is either invalid or unset");
-                }
+            	}
             }
             catch ( RepositoryNotAvailableException e )
             {
@@ -176,5 +187,44 @@ public class MacPluginEventInspector
                 }
             }
         }
+    }
+    
+    /**
+     * Update the modification time of all items stored by the plugin
+     * 
+     * @param repository The repository to update files in
+     */
+    public void updateFileModificationDate( Repository repository )
+    {
+    	for(String path : PATHS_TO_GENERATOR_MAP.keySet())
+    	{
+    		try
+    		{
+    			// Retrieve the item, update the modification time and save it
+				StorageItem item = repository.retrieveItem(new ResourceStoreRequest(path));
+				item.getRepositoryItemAttributes().setModified(System.currentTimeMillis());
+				repository.storeItem(false, item);
+			}
+    		catch (StorageException e)
+    		{
+    			logger.error("e");
+			}
+    		catch (AccessDeniedException e)
+    		{
+    			logger.error("e");
+			}
+    		catch (ItemNotFoundException e)
+    		{
+    			logger.error("e");
+			}
+    		catch (IllegalOperationException e)
+    		{
+    			logger.error("e");
+			}
+    		catch (UnsupportedStorageOperationException e)
+    		{
+    			logger.error("e");
+			}
+    	}
     }
 }
