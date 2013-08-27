@@ -55,12 +55,13 @@ public class DebianFileManager {
 	}
 
 	public byte[] getFile(final String name, final RepositoryData data) throws ExecutionException {
+		String key = data.getRepositoryId() + "#" + name;
 		if(!generators.containsKey(name))
 		{
 			throw new IllegalArgumentException("Don't know how to generate " + name);
 		}
 
-		return cache.get(name, new Callable<byte[]>()
+		return cache.get(key, new Callable<byte[]>()
 		{
 			@Override
 			public byte[] call()
