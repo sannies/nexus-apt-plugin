@@ -1,6 +1,9 @@
 package com.github.sannies.nexusaptplugin;
 
 
+import javax.inject.Inject;
+import javax.inject.Named;
+
 import org.apache.maven.index.ArtifactInfo;
 import org.apache.maven.index.ArtifactInfoFilter;
 import org.apache.maven.index.NexusIndexer;
@@ -17,18 +20,14 @@ import org.sonatype.nexus.proxy.item.ContentLocator;
 import org.sonatype.nexus.proxy.item.StorageFileItem;
 import org.sonatype.nexus.proxy.repository.Repository;
 
-import javax.inject.Inject;
-import javax.inject.Named;
+import com.github.sannies.nexusaptplugin.cache.DebianFileManager;
+import com.github.sannies.nexusaptplugin.cache.RepositoryData;
 
 /**
- * Archetype catalog content generator.
- *
- * @author cstamas
+ * @author Raniz
  */
-@Named(DebianContentGenerator.ID)
-public class DebianContentGenerator
+public abstract class AbstractContentGenerator
         implements ContentGenerator {
-    public static final String ID = "PackagesGzContentGenerator";
 
     @Inject
     private IndexerManager indexerManager;
@@ -39,24 +38,37 @@ public class DebianContentGenerator
     @Requirement
     private NexusIndexer indexer;
 
-    @Override
-    public String getGeneratorId() {
-        return ID;
-    }
+    @Inject
+    private DebianFileManager fileManager;
 
-    @Override
+    private final String mimeType;
+
+    private final String fileName;
+
+    public AbstractContentGenerator(String mimeType, String fileName)
+	{
+		this.mimeType = mimeType;
+		this.fileName = fileName;
+	}
+
+
+	@Override
     public ContentLocator generateContent(Repository repository, String path, StorageFileItem item)
             throws IllegalOperationException, ItemNotFoundException, LocalStorageException {
         // make length unknown (since it will be known only in the moment of actual content pull)
         item.setLength(-1);
 
+        RepositoryData data = new RepositoryData(repository.getId(),
+        	((DefaultIndexerManager)indexerManager).getRepositoryIndexContext(repository),
+        	new ArtifactInfoFilter()
+        	{
+	        	@Override
+				public boolean accepts(IndexingContext ctx, ArtifactInfo ai) {
+	        		return indexArtifactFilter.filterArtifactInfo(ai);
+	        	}
+        	},
+        	indexer);
 
-        return new DebianContentLocator(repository.getId(),
-                ((DefaultIndexerManager) indexerManager).getRepositoryIndexContext(repository),
-                new ArtifactInfoFilter() {
-                    public boolean accepts(IndexingContext ctx, ArtifactInfo ai) {
-                        return indexArtifactFilter.filterArtifactInfo(ai);
-                    }
-                }, indexer);
+        return new FileManagerContentLocator(fileManager, mimeType, data, fileName);
     }
 }
