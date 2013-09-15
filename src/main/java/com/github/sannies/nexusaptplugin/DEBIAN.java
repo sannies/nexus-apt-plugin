@@ -23,6 +23,6 @@ public interface DEBIAN {
     Field PRIORITY = new Field(null, DEBIAN_NAMESPACE, "Priority", "Debian Package Priority");
     Field DESCRIPTION = new Field(null, DEBIAN_NAMESPACE, "Description", "Debian Package Description");
 
-    Field MD5 = new Field( null, DEBIAN_NAMESPACE, "MD4sum", "MD5 checksum" );
+    Field MD5 = new Field( null, DEBIAN_NAMESPACE, "MD5sum", "MD5 checksum" );
     Field FILENAME = new Field( null, DEBIAN_NAMESPACE, "Filename", "Filename" );
 }
