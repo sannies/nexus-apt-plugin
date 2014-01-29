@@ -1,15 +1,12 @@
 
 package com.github.sannies.nexusaptplugin;
 
-import java.io.FileNotFoundException;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import org.bouncycastle.openpgp.PGPException;
 import org.slf4j.Logger;
-import org.sonatype.nexus.plugins.capabilities.internal.condition.RepositoryLocalStatusCondition;
 import org.sonatype.nexus.proxy.AccessDeniedException;
 import org.sonatype.nexus.proxy.IllegalOperationException;
 import org.sonatype.nexus.proxy.ItemNotFoundException;
@@ -23,7 +20,6 @@ import org.sonatype.nexus.proxy.events.RepositoryItemEvent;
 import org.sonatype.nexus.proxy.events.RepositoryItemEventDelete;
 import org.sonatype.nexus.proxy.events.RepositoryItemEventStore;
 import org.sonatype.nexus.proxy.events.RepositoryRegistryEventAdd;
-import org.sonatype.nexus.proxy.events.RepositoryRegistryRepositoryEvent;
 import org.sonatype.nexus.proxy.item.DefaultStorageFileItem;
 import org.sonatype.nexus.proxy.item.StorageItem;
 import org.sonatype.nexus.proxy.item.StringContentLocator;
@@ -37,7 +33,6 @@ import org.sonatype.nexus.proxy.storage.UnsupportedStorageOperationException;
 import org.sonatype.plexus.appevents.Event;
 
 import com.github.sannies.nexusaptplugin.sign.AptSigningConfiguration;
-import com.github.sannies.nexusaptplugin.sign.PGPSigner;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -163,7 +158,7 @@ public class MacPluginEventInspector
             	{
 	            	// Packages.gz
 	                DefaultStorageFileItem file =
-	                        new DynamicStorageFileItem( repository,
+	                        new DefaultStorageFileItem( repository,
 	                        		new ResourceStoreRequest( entry.getKey() ), true, false,
 	                                new StringContentLocator( entry.getValue() ) );
 	                file.setContentGeneratorId( entry.getValue() );
