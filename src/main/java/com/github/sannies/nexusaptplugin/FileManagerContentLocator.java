@@ -52,7 +52,12 @@ public class FileManagerContentLocator
 		return mimeType;
 	}
 
-	@Override
+    @Override
+    public long getLength() {
+        return UNKNOWN_LENGTH;
+    }
+
+    @Override
 	public boolean isReusable()
 	{
 		return false;
