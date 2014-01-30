@@ -26,22 +26,22 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import com.github.sannies.nexusaptplugin.DEBIAN;
-import com.github.sannies.nexusaptplugin.deb.DebControlParser;
-import com.github.sannies.nexusaptplugin.deb.GetControl;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.maven.index.*;
-import org.apache.maven.index.artifact.Gav;
+import org.apache.maven.index.ArtifactContext;
+import org.apache.maven.index.ArtifactInfo;
+import org.apache.maven.index.IndexerField;
+import org.apache.maven.index.IndexerFieldVersion;
 import org.apache.maven.index.context.IndexCreator;
 import org.apache.maven.index.creator.AbstractIndexCreator;
 import org.apache.maven.index.creator.MinimalArtifactInfoIndexCreator;
 import org.apache.maven.index.locator.Md5Locator;
-import org.apache.maven.index.util.zip.ZipFacade;
-import org.apache.maven.index.util.zip.ZipHandle;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.StringUtils;
+
+import com.github.sannies.nexusaptplugin.deb.DebControlParser;
+import com.github.sannies.nexusaptplugin.deb.GetControl;
 
 
 /**
@@ -98,10 +98,10 @@ public class DebianIndexCreator
     }
 
     public void populateArtifactInfo(ArtifactContext ac) throws IOException {
-        if ("deb".equals(ac.getArtifactInfo().packaging)) {
+        if (ac.getArtifact() != null && "deb".equals(ac.getArtifactInfo().packaging)) {
             List<String> control = GetControl.doGet(ac.getArtifact());
             ac.getArtifactInfo().getAttributes().putAll(DebControlParser.parse(control));
-            ac.getArtifactInfo().getAttributes().put("Filename", "./" + ac.getArtifactInfo().groupId.replace(".", "/") + "/" + ac.getArtifactInfo().artifactId + "/" + ac.getArtifactInfo().version + "/" + ac.getArtifactInfo().fname);
+            ac.getArtifactInfo().getAttributes().put("Filename", getRelativeFileNameOfArtifact(ac));
             File md5 = md5Locator.locate(ac.getArtifact());
             if (md5.exists()) {
                 try {
@@ -110,10 +110,11 @@ public class DebianIndexCreator
                     ac.addError(e);
                 }
             }
-
-
         }
+    }
 
+    private String getRelativeFileNameOfArtifact(ArtifactContext ac) {
+        return "./" + ac.getArtifactInfo().groupId.replace(".", "/") + "/" + ac.getArtifactInfo().artifactId + "/" + ac.getArtifactInfo().version + "/" + ac.getArtifactInfo().fname;
     }
 
 
