@@ -1,6 +1,7 @@
 
 package com.github.sannies.nexusaptplugin;
 
+import java.io.IOException;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -121,13 +122,9 @@ public class MacPluginEventInspector
         // new repo added or enabled, "install" the archetype catalogs
         try {
             for (Map.Entry<String, String> entry : PATHS_TO_GENERATOR_MAP.entrySet()) {
-                // Packages.gz
-                DefaultStorageFileItem file =
-                        new DefaultStorageFileItem(repository,
-                                new ResourceStoreRequest(entry.getKey()), true, false,
-                                new StringContentLocator(entry.getValue()));
-                file.setContentGeneratorId(entry.getValue());
-                repository.storeItem(false, file);
+                final String filePath = entry.getKey();
+                final String generatorId = entry.getValue();
+                storeItem(repository, filePath, generatorId);
             }
         }
         catch (RepositoryNotAvailableException e) {
@@ -154,20 +151,11 @@ public class MacPluginEventInspector
             return;
         }
 
-        for (String path : PATHS_TO_GENERATOR_MAP.keySet()) {
+        for (Map.Entry<String, String> entry : PATHS_TO_GENERATOR_MAP.entrySet()) {
             try {
-                // Retrieve the item, update the modification time and save it
-                StorageItem item = repository.retrieveItem(new ResourceStoreRequest(path));
-                item.getRepositoryItemAttributes().setModified(System.currentTimeMillis());
-                repository.storeItem(false, item);
-            }
-            catch (StorageException e) {
-                logger.error("e", e);
+                updateOrInstallStorageItem(repository, entry.getKey(), entry.getValue());
             }
             catch (AccessDeniedException e) {
-                logger.error("e", e);
-            }
-            catch (ItemNotFoundException e) {
                 logger.error("e", e);
             }
             catch (IllegalOperationException e) {
@@ -176,6 +164,32 @@ public class MacPluginEventInspector
             catch (UnsupportedStorageOperationException e) {
                 logger.error("e", e);
             }
+            catch (IOException e) {
+                logger.error("e", e);
+            }
         }
+    }
+
+    private void updateOrInstallStorageItem(Repository repository, String path, String generatorId) throws IllegalOperationException, IOException, AccessDeniedException, UnsupportedStorageOperationException {
+        try {
+            // Retrieve the item, update the modification time and save it
+            final ResourceStoreRequest request = new ResourceStoreRequest(path);
+            StorageItem item = repository.retrieveItem(request);
+            item.getRepositoryItemAttributes().setModified(System.currentTimeMillis());
+            repository.storeItem(false, item);
+        }
+        catch (ItemNotFoundException e) {
+            logger.info("Storage item not found, creating new item");
+            storeItem(repository, path, generatorId);
+        }
+    }
+
+    private void storeItem(Repository repository, String filePath, String generatorId) throws UnsupportedStorageOperationException, IllegalOperationException, StorageException {
+        DefaultStorageFileItem file =
+                new DefaultStorageFileItem(repository,
+                        new ResourceStoreRequest(filePath), true, false,
+                        new StringContentLocator(generatorId));
+        file.setContentGeneratorId(generatorId);
+        repository.storeItem(false, file);
     }
 }
