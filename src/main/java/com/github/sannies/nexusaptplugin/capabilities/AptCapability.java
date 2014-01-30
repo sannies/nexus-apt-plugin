@@ -5,13 +5,13 @@ import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import org.sonatype.nexus.plugins.capabilities.support.CapabilitySupport;
+import org.sonatype.nexus.capability.support.CapabilitySupport;
 
 import com.github.sannies.nexusaptplugin.sign.AptSigningConfiguration;
 
 @Named( AptCapabilityDescriptor.TYPE_ID )
 public class AptCapability
-    extends CapabilitySupport
+    extends CapabilitySupport<AptCapabilityConfiguration>
 {
 	private final AptSigningConfiguration signingConfiguration;
 
@@ -23,23 +23,28 @@ public class AptCapability
     }
 
     @Override
-    public void onCreate() throws Exception {
-        configuration = createConfiguration( context().properties() );
+    protected AptCapabilityConfiguration createConfig(Map<String, String> properties) throws Exception {
+        return new AptCapabilityConfiguration(properties);
     }
 
     @Override
-    public void onLoad() throws Exception {
-        configuration = createConfiguration( context().properties() );
+    protected void onCreate(AptCapabilityConfiguration config) {
+        configuration = config;
     }
 
     @Override
-    public void onUpdate() throws Exception {
-        configuration = createConfiguration( context().properties() );
+    protected void onLoad(AptCapabilityConfiguration config) throws Exception {
+        configuration = config;
     }
 
     @Override
-    public void onRemove() throws Exception {
-        configuration = null;
+    protected void onUpdate(AptCapabilityConfiguration config) throws Exception {
+        configuration = config;
+    }
+
+    @Override
+    protected void onRemove(AptCapabilityConfiguration config) throws Exception {
+        configuration = config;
     }
 
     @Override
@@ -53,9 +58,4 @@ public class AptCapability
     public String toString() {
         return this.getClass().getSimpleName();
     }
-
-    AptCapabilityConfiguration createConfiguration( final Map<String, String> properties ) {
-        return new AptCapabilityConfiguration( properties );
-    }
-
 }

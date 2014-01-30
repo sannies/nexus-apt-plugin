@@ -54,7 +54,7 @@ public class AptSigningConfiguration {
 
     public PGPSigner getSigner() throws IOException, PGPException {
         String ring = keyring;
-        if (ring.isEmpty()) {
+        if (ring == null || ring.isEmpty()) {
             ring = null;
             LinkedList<String> possibleLocations = new LinkedList<String>(getPossiblePGPSecureRingLocations());
             for (String location : possibleLocations) {
