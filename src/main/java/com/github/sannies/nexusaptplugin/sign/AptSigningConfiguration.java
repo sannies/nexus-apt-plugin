@@ -17,92 +17,86 @@ import org.bouncycastle.openpgp.PGPException;
 
 @Named
 @Singleton
-public class AptSigningConfiguration
-{
-	private String keyring;
+public class AptSigningConfiguration {
+    private String keyring;
 
-	private String key;
+    private String key;
 
-	private String passphrase;
+    private String passphrase;
 
-	@Inject
-	public AptSigningConfiguration() {
-	}
+    @Inject
+    public AptSigningConfiguration() {
+    }
 
-	public String getKeyring() {
-		return keyring;
-	}
+    public String getKeyring() {
+        return keyring;
+    }
 
-	public void setKeyring(String keyring) {
-		this.keyring = keyring;
-	}
+    public void setKeyring(String keyring) {
+        this.keyring = keyring;
+    }
 
-	public String getKey() {
-		return key;
-	}
+    public String getKey() {
+        return key;
+    }
 
-	public void setKey(String key) {
-		this.key = key;
-	}
+    public void setKey(String key) {
+        this.key = key;
+    }
 
-	public String getPassphrase() {
-		return passphrase;
-	}
+    public String getPassphrase() {
+        return passphrase;
+    }
 
-	public void setPassphrase(String passphrase) {
-		this.passphrase = passphrase;
-	}
+    public void setPassphrase(String passphrase) {
+        this.passphrase = passphrase;
+    }
 
-	public PGPSigner getSigner() throws IOException, PGPException
-	{
+    public PGPSigner getSigner() throws IOException, PGPException {
         String ring = keyring;
-        if(ring.isEmpty())
-        {
-        	ring = null;
+        if (ring.isEmpty()) {
+            ring = null;
             LinkedList<String> possibleLocations = new LinkedList<String>(getPossiblePGPSecureRingLocations());
-            for(String location : possibleLocations) {
-            	if(new File(location).exists())
-            	{
-            		ring = location;
-            		break;
-            	}
+            for (String location : possibleLocations) {
+                if (new File(location).exists()) {
+                    ring = location;
+                    break;
+                }
             }
             // If it's still null, throw a FileNotFoundException
-            if(ring == null)
-            {
-            	throw new FileNotFoundException("Keyring location is not set and it could not be found automatically");
+            if (ring == null) {
+                throw new FileNotFoundException("Keyring location is not set and it could not be found automatically");
             }
         }
-    	FileInputStream stream = new FileInputStream(ring);
-		return new PGPSigner(stream, key, passphrase);
-	}
+        FileInputStream stream = new FileInputStream(ring);
+        return new PGPSigner(stream, key, passphrase);
+    }
 
     /**
      * Get the possible locations where the secure keyring can be located.
      * Looks through known locations of the GNU PG secure keyring.
-     * 
+     *
      * @return The location of the PGP secure keyring if it was found,
      *         null otherwise
      */
-    private static Collection<String> getPossiblePGPSecureRingLocations()
-    {
+    private static Collection<String> getPossiblePGPSecureRingLocations() {
         LinkedHashSet<String> locations = new LinkedHashSet<String>();
 
         // The user's roaming profile on Windows, via environment
         String windowsRoaming = System.getenv("APPDATA");
-        if(windowsRoaming != null) {
+        if (windowsRoaming != null) {
             locations.add(joinPaths(windowsRoaming, "gnupg", "secring.gpg"));
         }
 
         // The user's local profile on Windows, via environment
         String windowsLocal = System.getenv("LOCALAPPDATA");
-        if(windowsLocal != null) {
+        if (windowsLocal != null) {
             locations.add(joinPaths(windowsLocal, "gnupg", "secring.gpg"));
         }
 
         // The user's home directory
         String home = System.getProperty("user.home");
-        if(home != null) {
+        if (home != null) {
             // *nix, including OS X
             locations.add(joinPaths(home, ".gnupg", "secring.gpg"));
 
@@ -115,7 +109,7 @@ public class AptSigningConfiguration
 
         // The Windows installation directory
         String windir = System.getProperty("WINDIR");
-        if(windir != null) {
+        if (windir != null) {
             // Local Profile on Windows 98 and ME
             locations.add(joinPaths(windir, "Application Data", "gnupg", "secring.gpg"));
         }
@@ -126,22 +120,21 @@ public class AptSigningConfiguration
     /**
      * Join together path elements with File.separator. Filters out null
      * elements.
-     * 
+     *
      * @param elements The path elements to join
      * @return elements concatenated together with File.separator
      */
     private static String joinPaths(String... elements) {
         StringBuilder builder = new StringBuilder();
         boolean first = true;
-        for(int i = 0; i < elements.length; i++) {
+        for (int i = 0; i < elements.length; i++) {
             // Skip null elements
-            if(elements[i] == null)
-            {
+            if (elements[i] == null) {
                 // This won't change the value of first if we skip elements
                 // in the beginning of the array
                 continue;
             }
-            if(!first) {
+            if (!first) {
                 builder.append(File.separatorChar);
             }
             builder.append(elements[i]);
