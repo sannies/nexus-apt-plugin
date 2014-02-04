@@ -1,29 +1,25 @@
 
 package com.github.sannies.nexusaptplugin;
 
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Singleton;
 
-import org.bouncycastle.openpgp.PGPException;
 import org.slf4j.Logger;
-import org.sonatype.nexus.plugins.capabilities.internal.condition.RepositoryLocalStatusCondition;
+import org.sonatype.nexus.events.EventSubscriber;
 import org.sonatype.nexus.proxy.AccessDeniedException;
 import org.sonatype.nexus.proxy.IllegalOperationException;
 import org.sonatype.nexus.proxy.ItemNotFoundException;
 import org.sonatype.nexus.proxy.RepositoryNotAvailableException;
 import org.sonatype.nexus.proxy.ResourceStoreRequest;
 import org.sonatype.nexus.proxy.StorageException;
-import org.sonatype.nexus.proxy.events.EventInspector;
-import org.sonatype.nexus.proxy.events.RepositoryEvent;
 import org.sonatype.nexus.proxy.events.RepositoryEventLocalStatusChanged;
-import org.sonatype.nexus.proxy.events.RepositoryItemEvent;
 import org.sonatype.nexus.proxy.events.RepositoryItemEventDelete;
 import org.sonatype.nexus.proxy.events.RepositoryItemEventStore;
 import org.sonatype.nexus.proxy.events.RepositoryRegistryEventAdd;
-import org.sonatype.nexus.proxy.events.RepositoryRegistryRepositoryEvent;
 import org.sonatype.nexus.proxy.item.DefaultStorageFileItem;
 import org.sonatype.nexus.proxy.item.StorageItem;
 import org.sonatype.nexus.proxy.item.StringContentLocator;
@@ -34,11 +30,9 @@ import org.sonatype.nexus.proxy.repository.LocalStatus;
 import org.sonatype.nexus.proxy.repository.ProxyRepository;
 import org.sonatype.nexus.proxy.repository.Repository;
 import org.sonatype.nexus.proxy.storage.UnsupportedStorageOperationException;
-import org.sonatype.plexus.appevents.Event;
 
-import com.github.sannies.nexusaptplugin.sign.AptSigningConfiguration;
-import com.github.sannies.nexusaptplugin.sign.PGPSigner;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.eventbus.Subscribe;
 
 /**
  * EventInspector that listens to registry events, repo addition and removal, and simply "hooks" in the generated
@@ -46,9 +40,10 @@ import com.google.common.collect.ImmutableMap;
  *
  * @author cstamas
  */
+@Singleton
+@Named("deb")
 public class MacPluginEventInspector
-        implements EventInspector
-{
+        implements EventSubscriber {
     public static final String PACKAGES_ARCHETYPE_PATH = "/Packages";
     public static final String PACKAGES_GZ_ARCHETYPE_PATH = "/Packages.gz";
     public static final String RELEASE_ARCHETYPE_PATH = "/Release";
@@ -56,175 +51,145 @@ public class MacPluginEventInspector
     public static final String PUBLIC_KEY_ARCHETYPE_PATH = "/apt-key.gpg.key";
 
     public static final ImmutableMap<String, String> PATHS_TO_GENERATOR_MAP =
-    		new ImmutableMap.Builder<String, String>()
-    			.put(PACKAGES_ARCHETYPE_PATH, PackagesContentGenerator.ID)
-    			.put(PACKAGES_GZ_ARCHETYPE_PATH, PackagesGzContentGenerator.ID)
-    			.put(RELEASE_ARCHETYPE_PATH, ReleaseContentGenerator.ID)
-    			.put(RELEASE_GPG_ARCHETYPE_PATH, ReleaseGPGContentGenerator.ID)
-    			.put(PUBLIC_KEY_ARCHETYPE_PATH, SignKeyContentGenerator.ID)
-    			.build();
+            new ImmutableMap.Builder<String, String>()
+                    .put(PACKAGES_ARCHETYPE_PATH, PackagesContentGenerator.ID)
+                    .put(PACKAGES_GZ_ARCHETYPE_PATH, PackagesGzContentGenerator.ID)
+                    .put(RELEASE_ARCHETYPE_PATH, ReleaseContentGenerator.ID)
+                    .put(RELEASE_GPG_ARCHETYPE_PATH, ReleaseGPGContentGenerator.ID)
+                    .put(PUBLIC_KEY_ARCHETYPE_PATH, SignKeyContentGenerator.ID)
+                    .build();
+
+    private final Logger logger;
+
+    private final ContentClass maven2ContentClass;
 
     @Inject
-    private Logger logger;
-
-    @Inject
-    @Named( "maven2" )
-    private ContentClass maven2ContentClass;
-
-    @Inject
-    private AptSigningConfiguration signingConfiguration;
-
-    public boolean accepts( Event<?> evt )
-    {
-		Repository repository;
-		if( evt instanceof RepositoryItemEventStore
-			|| evt instanceof RepositoryItemEventDelete
-			|| evt instanceof RepositoryEventLocalStatusChanged )
-		{
-			repository = ((RepositoryEvent)evt).getRepository();
-		}
-		else if(evt instanceof RepositoryRegistryEventAdd)
-		{
-			repository = ((RepositoryRegistryEventAdd)evt).getRepository();
-		}
-		else
-		{
-			// Not interested in this event type
-			return false;
-		}
-
-		// Check that the repository is compatible
-        if( !( maven2ContentClass.isCompatible( repository.getRepositoryContentClass() )
-                && ( repository.getRepositoryKind().isFacetAvailable( HostedRepository.class )
-                || repository.getRepositoryKind().isFacetAvailable( ProxyRepository.class ) || repository.getRepositoryKind().isFacetAvailable(
-                GroupRepository.class ) ) ) )
-        {
-        	// Not compatible with this repository
-        	return false;
-        }
-
-        // Check that the repository is in service
-        if( evt instanceof RepositoryEventLocalStatusChanged
-            && !LocalStatus.IN_SERVICE.equals( ((RepositoryEventLocalStatusChanged)evt).getNewLocalStatus() ) )
-        {
-        	// Repository is not local
-        	return false;
-        }
-
-        // If we haven't returned anything yet we're interested in the event
-        return true;
+    public MacPluginEventInspector(Logger logger, @Named("maven2") ContentClass maven2ContentClass) {
+        this.logger = logger;
+        this.maven2ContentClass = maven2ContentClass;
     }
 
-    public void inspect( Event<?> evt )
-    {
-        Repository repository = null;
+    @Subscribe
+    public void onRepositoryRegistryEventAdd(RepositoryRegistryEventAdd evt) {
+        installArcheTypeCatalogIfCompatible(evt.getRepository());
+    }
 
-        if ( evt instanceof RepositoryRegistryEventAdd )
-        {
-            repository = ((RepositoryRegistryEventAdd)evt).getRepository();
-        }
-        else if ( evt instanceof RepositoryEvent )
-        {
-            repository = ((RepositoryEvent)evt).getRepository();
-        }
-        else
-        {
-            // huh?
+    @Subscribe
+    public void onRepositoryEventLocalStatusChanged(RepositoryEventLocalStatusChanged evt) {
+        if (!isLocalStatusInService(evt)) {
             return;
         }
-        
-        if ( evt instanceof RepositoryRegistryEventAdd
-        		|| evt instanceof RepositoryEventLocalStatusChanged )
-        {
-        	installArchetypeCatalog(repository);
-        }
-        else if ( evt instanceof RepositoryItemEvent )
-        {
-        	StorageItem item = ((RepositoryItemEvent) evt).getItem();
-        	if( item.getName().toLowerCase().endsWith(".deb") )
-        	{
-        		updateFileModificationDate( repository );
-        	}
+        installArcheTypeCatalogIfCompatible(evt.getRepository());
+    }
+
+    private boolean isLocalStatusInService(RepositoryEventLocalStatusChanged evt) {
+        return LocalStatus.IN_SERVICE.equals(evt.getNewLocalStatus());
+    }
+
+    private void installArcheTypeCatalogIfCompatible(Repository repository) {
+        installArchetypeCatalog(repository);
+    }
+
+    @Subscribe
+    public void onRepositoryItemEventStore(RepositoryItemEventStore evt) {
+        updateDebItemInRepository(evt.getRepository(), evt.getItem());
+    }
+
+    @Subscribe
+    public void onRepositoryItemEventDelete(RepositoryItemEventDelete evt) {
+        updateDebItemInRepository(evt.getRepository(), evt.getItem());
+    }
+
+    private void updateDebItemInRepository(Repository repository, StorageItem item) {
+        if (item.getName().toLowerCase().endsWith(".deb")) {
+            updateFileModificationDate(repository);
         }
     }
-    
-    public void installArchetypeCatalog( Repository repository)
-    {
+
+    private boolean isRepositoryCompatible(Repository repository) {
         // check is it a maven2 content, and either a "hosted", "proxy" or "group" repository
-        if ( maven2ContentClass.isCompatible( repository.getRepositoryContentClass() )
-                && ( repository.getRepositoryKind().isFacetAvailable( HostedRepository.class )
-                || repository.getRepositoryKind().isFacetAvailable( ProxyRepository.class ) || repository.getRepositoryKind().isFacetAvailable(
-                GroupRepository.class ) ) )
-        {
-            // new repo added or enabled, "install" the archetype catalogs
-            try
-            {
-            	for(Map.Entry<String, String> entry : PATHS_TO_GENERATOR_MAP.entrySet())
-            	{
-	            	// Packages.gz
-	                DefaultStorageFileItem file =
-	                        new DynamicStorageFileItem( repository,
-	                        		new ResourceStoreRequest( entry.getKey() ), true, false,
-	                                new StringContentLocator( entry.getValue() ) );
-	                file.setContentGeneratorId( entry.getValue() );
-	                repository.storeItem( false, file );
-            	}
+        return maven2ContentClass.isCompatible(repository.getRepositoryContentClass())
+                && (repository.getRepositoryKind().isFacetAvailable(HostedRepository.class)
+                || repository.getRepositoryKind().isFacetAvailable(ProxyRepository.class) || repository.getRepositoryKind().isFacetAvailable(
+                GroupRepository.class));
+    }
+
+    public void installArchetypeCatalog(Repository repository) {
+        if (!isRepositoryCompatible(repository)) {
+            return;
+        }
+
+        // new repo added or enabled, "install" the archetype catalogs
+        try {
+            for (Map.Entry<String, String> entry : PATHS_TO_GENERATOR_MAP.entrySet()) {
+                final String filePath = entry.getKey();
+                final String generatorId = entry.getValue();
+                storeItem(repository, filePath, generatorId);
             }
-            catch ( RepositoryNotAvailableException e )
-            {
-                logger.info( "Unable to install the generated archetype catalog, repository \""
-                        + e.getRepository().getId() + "\" is out of service." );
+        }
+        catch (RepositoryNotAvailableException e) {
+            logger.info("Unable to install the generated archetype catalog, repository \""
+                    + e.getRepository().getId() + "\" is out of service.");
+        }
+        catch (Exception e) {
+            if (logger.isDebugEnabled()) {
+                logger.info("Unable to install the generated archetype catalog!", e);
             }
-            catch ( Exception e )
-            {
-                if ( logger.isDebugEnabled() )
-                {
-                    logger.info( "Unable to install the generated archetype catalog!", e );
-                }
-                else
-                {
-                    logger.info( "Unable to install the generated archetype catalog:" + e.getMessage() );
-                }
+            else {
+                logger.info("Unable to install the generated archetype catalog:" + e.getMessage());
             }
         }
     }
-    
+
     /**
      * Update the modification time of all items stored by the plugin
-     * 
+     *
      * @param repository The repository to update files in
      */
-    public void updateFileModificationDate( Repository repository )
-    {
-    	for(String path : PATHS_TO_GENERATOR_MAP.keySet())
-    	{
-    		try
-    		{
-    			// Retrieve the item, update the modification time and save it
-				StorageItem item = repository.retrieveItem(new ResourceStoreRequest(path));
-				item.getRepositoryItemAttributes().setModified(System.currentTimeMillis());
-				repository.storeItem(false, item);
-			}
-    		catch (StorageException e)
-    		{
-    			logger.error("e");
-			}
-    		catch (AccessDeniedException e)
-    		{
-    			logger.error("e");
-			}
-    		catch (ItemNotFoundException e)
-    		{
-    			logger.error("e");
-			}
-    		catch (IllegalOperationException e)
-    		{
-    			logger.error("e");
-			}
-    		catch (UnsupportedStorageOperationException e)
-    		{
-    			logger.error("e");
-			}
-    	}
+    public void updateFileModificationDate(Repository repository) {
+        if (!isRepositoryCompatible(repository)) {
+            return;
+        }
+
+        for (Map.Entry<String, String> entry : PATHS_TO_GENERATOR_MAP.entrySet()) {
+            try {
+                updateOrInstallStorageItem(repository, entry.getKey(), entry.getValue());
+            }
+            catch (AccessDeniedException e) {
+                logger.error("e", e);
+            }
+            catch (IllegalOperationException e) {
+                logger.error("e", e);
+            }
+            catch (UnsupportedStorageOperationException e) {
+                logger.error("e", e);
+            }
+            catch (IOException e) {
+                logger.error("e", e);
+            }
+        }
+    }
+
+    private void updateOrInstallStorageItem(Repository repository, String path, String generatorId) throws IllegalOperationException, IOException, AccessDeniedException, UnsupportedStorageOperationException {
+        try {
+            // Retrieve the item, update the modification time and save it
+            final ResourceStoreRequest request = new ResourceStoreRequest(path);
+            StorageItem item = repository.retrieveItem(request);
+            item.getRepositoryItemAttributes().setModified(System.currentTimeMillis());
+            repository.storeItem(false, item);
+        }
+        catch (ItemNotFoundException e) {
+            logger.info("Storage item not found, creating new item");
+            storeItem(repository, path, generatorId);
+        }
+    }
+
+    private void storeItem(Repository repository, String filePath, String generatorId) throws UnsupportedStorageOperationException, IllegalOperationException, StorageException {
+        DefaultStorageFileItem file =
+                new DefaultStorageFileItem(repository,
+                        new ResourceStoreRequest(filePath), true, false,
+                        new StringContentLocator(generatorId));
+        file.setContentGeneratorId(generatorId);
+        repository.storeItem(false, file);
     }
 }

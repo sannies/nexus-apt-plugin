@@ -1,6 +1,9 @@
+New location
+============
 
-https://github.com/Tangresh/nexus-apt-plugin THIS REPO IS NO LONGER MAINTAINED BUT Tangresh WILL CONTINUE TO WORK ON IT
-======================
+Original work by https://github.com/sannies
+
+SEE https://github.com/inventage/nexus-apt-plugin FOR MAINTAINED REPO
 
 Nexus APT Plugin
 ================
