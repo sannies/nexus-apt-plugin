@@ -1,3 +1,7 @@
+
+https://github.com/Tangresh/nexus-apt-plugin THIS REPO IS NO LONGER MAINTAINED BUT Tangresh WILL CONTINUE TO WORK ON IT
+======================
+
 Nexus APT Plugin
 ================
 
